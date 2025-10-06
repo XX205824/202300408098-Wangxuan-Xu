@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Calculator</title>
+    <link rel="stylesheet" href="https://cdn.tailwindcss.com">
+    <style>
+        .calculator { max-width: 300px; }
+        .display { height: 80px; }
+        .btn { width: 100%; height: 60px; font-size: 1.2rem; }
+        .num-btn { background: #f0f0f0; }
+        .op-btn { background: #4299e1; color: white; }
+        .clear-btn { background: #f56565; color: white; }
+    </style>
+</head>
+<body class="flex justify-center items-center min-h-screen bg-gray-100">
+    <div class="calculator bg-white p-4 rounded-lg shadow">
+        <!-- Display Area -->
+        <div class="display bg-gray-50 rounded mb-4 p-2 text-right text-2xl flex items-end justify-end">
+            <span id="result">0</span>
+        </div>
+        
+        <!-- Button Area -->
+        <div class="grid grid-cols-4 gap-2">
+            <button class="btn clear-btn" data-action="clear">C</button>
+            <button class="btn op-btn" data-action="divide">÷</button>
+            <button class="btn op-btn" data-action="multiply">×</button>
+            <button class="btn op-btn" data-action="subtract">-</button>
+            
+            <button class="btn num-btn" data-num="7">7</button>
+            <button class="btn num-btn" data-num="8">8</button>
+            <button class="btn num-btn" data-num="9">9</button>
+            <button class="btn op-btn" data-action="add">+</button>
+            
+            <button class="btn num-btn" data-num="4">4</button>
+            <button class="btn num-btn" data-num="5">5</button>
+            <button class="btn num-btn" data-num="6">6</button>
+            <button class="btn op-btn" data-action="equals">=</button>
+            
+            <button class="btn num-btn" data-num="1">1</button>
+            <button class="btn num-btn" data-num="2">2</button>
+            <button class="btn num-btn" data-num="3">3</button>
+            <button class="btn num-btn" data-num="0" style="grid-column: span 2">0</button>
+            <button class="btn num-btn" data-action="dot">.</button>
+        </div>
+    </div>
+
+    <script>
+        // Basic calculator state (core variables only)
+        const calculator = {
+            currentValue: '0',
+            previousValue: null,
+            operator: null,
+            resetOnNextInput: false
+        };
+
+        // DOM Elements
+        const resultEl = document.getElementById('result');
+
+        // Handle number input
+        function handleNumberInput(num) {
+            if (calculator.resetOnNextInput) {
+                calculator.currentValue = num;
+                calculator.resetOnNextInput = false;
+            } else {
+                calculator.currentValue = calculator.currentValue === '0' ? num : calculator.currentValue + num;
+            }
+            updateDisplay();
+        }
+
+        // Handle operators
+        function handleOperator(op) {
+            const current = parseFloat(calculator.currentValue);
+            
+            // Calculate if operator already exists
+            if (calculator.operator && calculator.previousValue !== null) {
+                calculateResult();
+            } else {
+                calculator.previousValue = current;
+            }
+            
+            calculator.operator = op;
+            calculator.resetOnNextInput = true;
+        }
+
+        // Calculate result
+        function calculateResult() {
+            if (!calculator.operator || calculator.previousValue === null) return;
+            
+            const prev = calculator.previousValue;
+            const current = parseFloat(calculator.currentValue);
+            let result;
+            
+            switch (calculator.operator) {
+                case 'add': result = prev + current; break;
+                case 'subtract': result = prev - current; break;
+                case 'multiply': result = prev * current; break;
+                case 'divide': 
+                    result = current === 0 ? 'Error' : prev / current; 
+                    break;
+                default: return;
+            }
+            
+            calculator.currentValue = result.toString();
+            calculator.previousValue = null;
+            calculator.operator = null;
+            calculator.resetOnNextInput = true;
+            updateDisplay();
+        }
+
+        // Clear all
+        function clearCalculator() {
+            calculator.currentValue = '0';
+            calculator.previousValue = null;
+            calculator.operator = null;
+            calculator.resetOnNextInput = false;
+            updateDisplay();
+        }
+
+        // Handle decimal point
+        function handleDot() {
+            if (calculator.resetOnNextInput) {
+                calculator.currentValue = '0.';
+                calculator.resetOnNextInput = false;
+            } else if (!calculator.currentValue.includes('.')) {
+                calculator.currentValue += '.';
+            }
+            updateDisplay();
+        }
+
+        // Update display
+        function updateDisplay() {
+            resultEl.textContent = calculator.currentValue;
+        }
+
+        // Event listeners
+        document.querySelectorAll('.num-btn[data-num]').forEach(btn => {
+            btn.addEventListener('click', () => handleNumberInput(btn.dataset.num));
+        });
+
+        document.querySelectorAll('.op-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.action === 'equals') {
+                    calculateResult();
+                } else {
+                    handleOperator(btn.dataset.action);
+                }
+            });
+        });
+
+        document.querySelector('[data-action="clear"]').addEventListener('click', clearCalculator);
+        document.querySelector('[data-action="dot"]').addEventListener('click', handleDot);
+    </script>
+</body>
+</html>
