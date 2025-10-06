@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Calculator</title>
+    <link rel="stylesheet" href="https://cdn.tailwindcss.com">
+    <style>
+        .calculator { max-width: 350px; }
+        .display { min-height: 100px; }
+        .history { font-size: 0.9rem; color: #666; height: 24px; }
+        .result { font-size: 1.8rem; }
+        .btn { height: 65px; font-size: 1.2rem; transition: all 0.2s; }
+        .btn:hover { filter: brightness(0.9); }
+        .num-btn { background: #f0f0f0; }
+        .op-btn { background: #4299e1; color: white; }
+        .func-btn { background: #ed8936; color: white; }
+        .error { color: #e53e3e; font-weight: bold; }
+    </style>
+</head>
+<body class="flex justify-center items-center min-h-screen bg-gray-100">
+    <div class="calculator bg-white p-4 rounded-lg shadow-lg">
+        <!-- Display Area (with history log) -->
+        <div class="display bg-gray-50 rounded mb-4 p-3 text-right">
+            <div class="history" id="history"></div>
+            <div class="result" id="result">0</div>
+        </div>
+        
+        <!-- Button Area (with advanced function buttons) -->
+        <div class="grid grid-cols-4 gap-2">
+            <button class="btn func-btn" data-action="clear">AC</button>
+            <button class="btn func-btn" data-action="backspace">←</button>
+            <button class="btn op-btn" data-action="mod">%</button>
+            <button class="btn op-btn" data-action="divide">÷</button>
+            
+            <button class="btn num-btn" data-num="7">7</button>
+            <button class="btn num-btn" data-num="8">8</button>
+            <button class="btn num-btn" data-num="9">9</button>
+            <button class="btn op-btn" data-action="multiply">×</button>
+            
+            <button class="btn num-btn" data-num="4">4</button>
+            <button class="btn num-btn" data-num="5">5</button>
+            <button class="btn num-btn" data-num="6">6</button>
+            <button class="btn op-btn" data-action="subtract">-</button>
+            
+            <button class="btn num-btn" data-num="1">1</button>
+            <button class="btn num-btn" data-num="2">2</button>
+            <button class="btn num-btn" data-num="3">3</button>
+            <button class="btn op-btn" data-action="add">+</button>
+            
+            <button class="btn num-btn" data-num="0" style="grid-column: span 2">0</button>
+            <button class="btn num-btn" data-action="dot">.</button>
+            <button class="btn op-btn" data-action="equals">=</button>
+        </div>
+    </div>
+
+    <script>
+        // Advanced calculator state (more variables for extended features)
+        const calculator = {
+            currentValue: '0',
+            firstOperand: null,
+            operator: null,
+            waitingForSecondOperand: false,
+            history: '',
+            isError: false
+        };
+
+        // DOM Elements
+        const resultEl = document.getElementById('result');
+        const historyEl = document.getElementById('history');
+
+        // 1. Number input (supports reset after operator)
+        function handleNumberInput(num) {
+            if (calculator.isError) {
+                calculator.currentValue = num;
+                calculator.isError = false;
+            } else if (calculator.waitingForSecondOperand) {
+                calculator.currentValue = num;
+                calculator.waitingForSecondOperand = false;
+            } else {
+                calculator.currentValue = calculator.currentValue === '0' ? num : calculator.currentValue + num;
+            }
+            updateDisplay();
+        }
+
+        // 2. Operator handling (supports chained operations and history log)
+        function handleOperator(op) {
+            if (calculator.isError) return;
+            
+            const current = parseFloat(calculator.currentValue);
+            
+            // Handle chained operations
+            if (calculator.operator && !calculator.waitingForSecondOperand) {
+                calculateResult();
+                calculator.firstOperand = parseFloat(calculator.currentValue);
+            } else if (calculator.firstOperand === null) {
+                calculator.firstOperand = current;
+            }
+            
+            calculator.operator = op;
+            calculator.waitingForSecondOperand = true;
+            // Update history log
+            calculator.history = `${calculator.firstOperand} ${getOperatorSymbol(op)}`;
+            updateDisplay();
+        }
+
+        // 3. Result calculation (supports modulus, error handling, and formatting)
+        function calculateResult() {
+            if (!calculator.operator || calculator.firstOperand === null || calculator.isError) return;
+            
+            const prev = calculator.firstOperand;
+            const current = parseFloat(calculator.currentValue);
+            let result;
+            const opSymbol = getOperatorSymbol(calculator.operator);
+            
+            // Operation logic (with modulus and error handling)
+            switch (calculator.operator) {
+                case 'add': result = prev + current; break;
+                case 'subtract': result = prev - current; break;
+                case 'multiply': result = prev * current; break;
+                case 'divide': 
+                    result = current === 0 ? 'Error' : prev / current; 
+                    break;
+                case 'mod': 
+                    result = current === 0 ? 'Error' : prev % current; 
+                    break;
+                default: return;
+            }
+            
+            // Handle error state
+            if (result === 'Error') {
+                calculator.isError = true;
+                calculator.currentValue = 'Error';
+            } else {
+                // Format result (remove trailing zeros for decimals)
+                calculator.currentValue = formatResult(result);
+            }
+            
+            // Update history log
+            calculator.history += ` ${current} =`;
+            calculator.firstOperand = null;
+            calculator.operator = null;
+            calculator.waitingForSecondOperand = true;
+            updateDisplay();
+        }
+
+        // 4. Advanced feature: Backspace
+        function handleBackspace() {
+            if (calculator.isError) {
+                calculator.currentValue = '0';
+                calculator.isError = false;
+            } else if (calculator.currentValue.length > 1) {
+                calculator.currentValue = calculator.currentValue.slice(0, -1);
+            } else {
+                calculator.currentValue = '0';
+            }
+            updateDisplay();
+        }
+
+        // 5. Advanced feature: Result formatting
+        function formatResult(num) {
+            if (Number.isInteger(num)) return num.toString();
+            return num.toFixed(6).replace(/\.?0+$/, ''); // Remove trailing zeros
+        }
+
+        // Helper: Get operator symbol for history log
+        function getOperatorSymbol(op) {
+            const symbols = {
+                add: '+',
+                subtract: '-',
+                multiply: '×',
+                divide: '÷',
+                mod: '%'
+            };
+            return symbols[op] || op;
+        }
+
+        // Basic feature: Clear all (reset all states)
+        function clearCalculator() {
+            calculator.currentValue = '0';
+            calculator.firstOperand = null;
+            calculator.operator = null;
+            calculator.waitingForSecondOperand = false;
+            calculator.history = '';
+            calculator.isError = false;
+            updateDisplay();
+        }
+
+        // Basic feature: Decimal point handling
+        function handleDot() {
+            if (calculator.isError) {
+                calculator.currentValue = '0.';
+                calculator.isError = false;
+                calculator.waitingForSecondOperand = false;
+            } else if (calculator.waitingForSecondOperand) {
+                calculator.currentValue = '0.';
+                calculator.waitingForSecondOperand = false;
+            } else if (!calculator.currentValue.includes('.')) {
+                calculator.currentValue += '.';
+            }
+            updateDisplay();
+        }
+
+        // Update display (with history and error styling)
+        function updateDisplay() {
+            resultEl.textContent = calculator.currentValue;
+            historyEl.textContent = calculator.history;
+            // Error state styling
+            if (calculator.isError) {
+                resultEl.classList.add('error');
+            } else {
+                resultEl.classList.remove('error');
+            }
+        }
+
+        // Event listeners (including backspace and modulus)
+        document.querySelectorAll('.num-btn[data-num]').forEach(btn => {
+            btn.addEventListener('click', () => handleNumberInput(btn.dataset.num));
+        });
+
+        document.querySelectorAll('.op-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.action === 'equals') {
+                    calculateResult();
+                } else {
+                    handleOperator(btn.dataset.action);
+                }
+            });
+        });
+
+        document.querySelector('[data-action="clear"]').addEventListener('click', clearCalculator);
+        document.querySelector('[data-action="dot"]').addEventListener('click', handleDot);
+        document.querySelector('[data-action="backspace"]').addEventListener('click', handleBackspace);
+    </script>
+</body>
+</html>
